@@ -1,6 +1,6 @@
 # models
 Repo for code and results of models and exploratory data analysis.
-`
+
 ## DataKind + Kiva
 
 For a thorough introduction to the work Kiva does, check out [the detailed welcome doc](https://docs.google.com/document/d/10rCACYpqx_LTh_1RaEd2jGNX2XXOfBU8xOqvI8TVGLQ/edit) Jonathan Joa, the Data Ambassador for this project, put together.

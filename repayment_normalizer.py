@@ -1,7 +1,6 @@
 import arrow
 import csv
 import pprint
-import datetime
 
 p = pprint.PrettyPrinter()
 
@@ -44,7 +43,6 @@ for row in collected_csv:
 print('Sample entry: {}'.format(id_dict['15']))
 print('done reading in collected_csv')
 
-# format everything -- FIX IT
 output_rows = []
 id_dict_len = len(id_dict.keys())
 index = 0
@@ -62,32 +60,21 @@ for zip_id, dictionary in id_dict.items():
     print('{} for {} iters'.format(zip_id, iteration_length))
     print('Expected payment length: {}'.format(len(dictionary['expected_payments'])))
     print('Actual repayment length: {}'.format(len(dictionary['collected_payments'])))
-    # try:
-    #     expected_payment = dictionary['expected_payments'][expected_payment_index]
-    #     expected_payment_index += 1
-    # except:
-    #     expected_payment = []
-    #     # print('Skipping loan {} due to lack of repayment data'.format(zip_id))
-    #     continue
 
     if dictionary['collected_payments'] == []:
         print('Skipping loan {} because no repayment data.'.format(zip_id))
         continue
 
     if dictionary['expected_payments'] == []:
-      print('Skipping loan {} because no expected payment data'.format(zip_id))
-      continue
+        print('Skipping loan {} because no expected payment data'.format(zip_id))
+        continue
 
-    try:
-        current_payment = dictionary['collected_payments'][current_payment_index]
-        current_payment_index += 1
-        expected_payment = dictionary['expected_payments'][expected_payment_index]
-        current_payment_index += 1
-    except:
-        print('Erroring on {} with index of {}//{}'.format(zip_id, current_payment_index, expected_payment_index))
-        print(dictionary)
-        input('hmm.....')
+    current_payment = dictionary['collected_payments'][current_payment_index]
+    current_payment_index += 1
+    expected_payment = dictionary['expected_payments'][expected_payment_index]
+    current_payment_index += 1
 
+    payments_not_made_list = []
     while expected_payment_index < iteration_length:
 
         expected_payment_amount = float(expected_payment['amount'])
@@ -96,74 +83,48 @@ for zip_id, dictionary in id_dict.items():
         current_payment_amount = float(current_payment['amount'])      
         cumulative_repaid_amount = cumulative_repaid_amount + current_payment_amount
 
-        if cumulative_repaid_amount >= cumulative_expected_amount:
-            print('first block')
-            while cumulative_repaid_amount >= cumulative_expected_amount:
-                this_row = {'zip_loan_id': zip_id,
-                            'repayment_expected_date': expected_payment['date'],
-                            'repayment_expected_amount': expected_payment['amount'],
-                            'cumulative_expected_amount': cumulative_expected_amount,
-                            'repayment_amount': current_payment['amount'],
-                            'repayment_date': current_payment['date']}
-                output_rows.append(this_row)
-                try:
-                    expected_payment = dictionary['expected_payments'][expected_payment_index]
-                    expected_payment_index += 1
-                except IndexError:
-                  print(dictionary)
-                  print(expected_payment_index)
-                  print(current_payment_index)
-                  raise
-                expected_payment_amount = float(expected_payment['amount'])
-                cumulative_expected_amount = cumulative_expected_amount + expected_payment_amount
-            #     print(cumulative_expected_amount)
-            #     print(cumulative_repaid_amount)
+        while cumulative_repaid_amount >= cumulative_expected_amount:
+            this_row = {'zip_loan_id': zip_id,
+                        'repayment_expected_date': expected_payment['date'],
+                        'repayment_expected_amount': expected_payment['amount'],
+                        'cumulative_expected_amount': cumulative_expected_amount,
+                        'repayment_amount': current_payment['amount'],
+                        'repayment_date': current_payment['date']}
+            output_rows.append(this_row)
+            expected_payment = dictionary['expected_payments'][expected_payment_index]
+            expected_payment_index += 1
+            expected_payment_amount = float(expected_payment['amount'])
+            cumulative_expected_amount = cumulative_expected_amount + expected_payment_amount
+            payments_not_made_list = []
 
-            # print('breakout')
-            # this_row = {'zip_loan_id': zip_id,
-            #             'repayment_expected_date': expected_payment['date'],
-            #             'repayment_expected_amount': expected_payment['amount'],
-            #             'cumulative_expected_amount': cumulative_expected_amount,
-            #             'repayment_amount': current_payment['amount'],
-            #             'repayment_date': current_payment['date']}
-            # output_rows.append(this_row)
-            break
-
-        elif cumulative_repaid_amount < cumulative_expected_amount:
-            # print(cumulative_repaid_amount)
-            # print(cumulative_expected_amount)
-            # print(expected_payment_index)
-            # print('second block')
+        if cumulative_repaid_amount < cumulative_expected_amount:
             try:
                 current_payment = dictionary['collected_payments'][current_payment_index]
+                this_row = {'zip_loan_id': zip_id,
+                    'repayment_expected_date': expected_payment['date'],
+                    'repayment_expected_amount': expected_payment['amount'],
+                    'cumulative_expected_amount': cumulative_expected_amount,
+                    'repayment_amount': 'not made',
+                    'repayment_date': 'not made'}
+                payments_not_made_list.append(this_row)
                 current_payment_index += 1
             except IndexError:
-                # print('not paid {} for index {}'.format(zip_id, current_payment_index))
-                # input('...')
                 while expected_payment_index < iteration_length:
-                # means there is no repayment to match this amount yet
+                # means there is no repayment to match this amount yet                  
                     this_row = {'zip_loan_id': zip_id,
                         'repayment_expected_date': expected_payment['date'],
                         'repayment_expected_amount': expected_payment['amount'],
                         'cumulative_expected_amount': cumulative_expected_amount,
                         'repayment_amount': 'not made',
                         'repayment_date': 'not made'}
-                    output_rows.append(this_row)
-                    # print(this_row)
+                    payments_not_made_list.append(this_row)
                     expected_payment = dictionary['expected_payments'][expected_payment_index]
                     expected_payment_index += 1
                     expected_payment_amount = float(expected_payment['amount'])
                     cumulative_expected_amount = cumulative_expected_amount + expected_payment_amount
-
-            # current_payment = dictionary['collected_payments'][current_payment_index]
-            # current_payment_index += 1
-
-# print(output_rows)
-
-# doesnt look like the "future payments" are being accurately coded
-# just prints all of the same entry instead of "not made"
-# i think this is because it's never hitting the "index error"
-# check out 19717
+                if len(payments_not_made_list) > 0:
+                    for payment_row in payments_not_made_list:
+                        output_rows.append(payment_row)
 
 output = csv.DictWriter(open('data/output.csv', 'wb'), fieldnames=[
                                                   'zip_loan_id',
@@ -176,3 +137,8 @@ output = csv.DictWriter(open('data/output.csv', 'wb'), fieldnames=[
 output.writeheader()
 for row in output_rows:
     output.writerow(row)
+
+
+# still to address
+# first repayment date is repeated
+# what is 4022 doing, why does it jump from 200 to 4900

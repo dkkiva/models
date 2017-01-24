@@ -19,7 +19,7 @@ for row in expected_csv:
     zip_loan_id = row['zip_loan_id']
     if zip_loan_id not in id_dict.keys():
         id_dict[zip_loan_id] = {'expected_payments':[], 'collected_payments':[]}
-    repayment_date = arrow.get(row['repayment_expected_time'], 'M/D/YY H:mm').date()
+    repayment_date = arrow.get(row['repayment_expected_time'], 'M/D/YYYY H:mm').date()
     expected_payment = {'amount': row['amount_due'], 'date': repayment_date}
     id_dict[zip_loan_id]['expected_payments'].append(expected_payment)
 
@@ -35,7 +35,7 @@ for row in collected_csv:
     if zip_loan_id not in id_dict.keys():
         id_dict[zip_loan_id] = {'expected_payments':[], 'collected_payments':[]}
     if row['repayment_collected_time'] != '':
-        repayment_date = arrow.get(row['repayment_collected_time'], 'M/D/YY H:mm').date()
+        repayment_date = arrow.get(row['repayment_collected_time'], 'M/D/YYYY H:mm').date()
     else:
         repayment_date = ''
     collected_payment = {'amount': row['amount_collected'], 'date': repayment_date}
@@ -46,58 +46,126 @@ print('done reading in collected_csv')
 
 # format everything -- FIX IT
 output_rows = []
+id_dict_len = len(id_dict.keys())
+index = 0
 for zip_id, dictionary in id_dict.items():
+
     cumulative_expected_amount = 0
     cumulative_repaid_amount = 0
     expected_payment_index = 0
     current_payment_index = 0
 
+    index += 1
+    print('{} of {} ids'.format(index, id_dict_len))
+
     iteration_length = len(dictionary['expected_payments'])
-    try:
-        expected_payment = dictionary['expected_payments'][expected_payment_index]
-        expected_payment_index += 1
-    except:
-        expected_payment = []
-        # print('Skipping loan {} due to lack of repayment data'.format(zip_id))
+    print('{} for {} iters'.format(zip_id, iteration_length))
+    print('Expected payment length: {}'.format(len(dictionary['expected_payments'])))
+    print('Actual repayment length: {}'.format(len(dictionary['collected_payments'])))
+    # try:
+    #     expected_payment = dictionary['expected_payments'][expected_payment_index]
+    #     expected_payment_index += 1
+    # except:
+    #     expected_payment = []
+    #     # print('Skipping loan {} due to lack of repayment data'.format(zip_id))
+    #     continue
+
+    if dictionary['collected_payments'] == []:
+        print('Skipping loan {} because no repayment data.'.format(zip_id))
         continue
 
-    current_payment = dictionary['collected_payments'][current_payment_index]
-    current_payment_index += 1
+    if dictionary['expected_payments'] == []:
+      print('Skipping loan {} because no expected payment data'.format(zip_id))
+      continue
+
+    try:
+        current_payment = dictionary['collected_payments'][current_payment_index]
+        current_payment_index += 1
+        expected_payment = dictionary['expected_payments'][expected_payment_index]
+        current_payment_index += 1
+    except:
+        print('Erroring on {} with index of {}//{}'.format(zip_id, current_payment_index, expected_payment_index))
+        print(dictionary)
+        input('hmm.....')
 
     while expected_payment_index < iteration_length:
 
-        # fix the input problems from the csv
-        try:
-            expected_payment_amount = int(expected_payment['amount'])
-        except ValueError:
-            expected_payment_amount = float(expected_payment['amount'])
+        expected_payment_amount = float(expected_payment['amount'])
         cumulative_expected_amount = cumulative_expected_amount + expected_payment_amount
 
-        try:
-            current_payment_amount = int(current_payment['amount'])
-        except ValueError:
-            current_payment_amount = float(current_payment['amount'])      
+        current_payment_amount = float(current_payment['amount'])      
         cumulative_repaid_amount = cumulative_repaid_amount + current_payment_amount
 
-        if cumulative_repaid_amount > cumulative_expected_amount:
-            this_row = {'zip_loan_id': zip_id,
+        if cumulative_repaid_amount >= cumulative_expected_amount:
+            print('first block')
+            while cumulative_repaid_amount >= cumulative_expected_amount:
+                this_row = {'zip_loan_id': zip_id,
+                            'repayment_expected_date': expected_payment['date'],
+                            'repayment_expected_amount': expected_payment['amount'],
+                            'cumulative_expected_amount': cumulative_expected_amount,
+                            'repayment_amount': current_payment['amount'],
+                            'repayment_date': current_payment['date']}
+                output_rows.append(this_row)
+                try:
+                    expected_payment = dictionary['expected_payments'][expected_payment_index]
+                    expected_payment_index += 1
+                except IndexError:
+                  print(dictionary)
+                  print(expected_payment_index)
+                  print(current_payment_index)
+                  raise
+                expected_payment_amount = float(expected_payment['amount'])
+                cumulative_expected_amount = cumulative_expected_amount + expected_payment_amount
+            #     print(cumulative_expected_amount)
+            #     print(cumulative_repaid_amount)
+
+            # print('breakout')
+            # this_row = {'zip_loan_id': zip_id,
+            #             'repayment_expected_date': expected_payment['date'],
+            #             'repayment_expected_amount': expected_payment['amount'],
+            #             'cumulative_expected_amount': cumulative_expected_amount,
+            #             'repayment_amount': current_payment['amount'],
+            #             'repayment_date': current_payment['date']}
+            # output_rows.append(this_row)
+            break
+
+        elif cumulative_repaid_amount < cumulative_expected_amount:
+            # print(cumulative_repaid_amount)
+            # print(cumulative_expected_amount)
+            # print(expected_payment_index)
+            # print('second block')
+            try:
+                current_payment = dictionary['collected_payments'][current_payment_index]
+                current_payment_index += 1
+            except IndexError:
+                # print('not paid {} for index {}'.format(zip_id, current_payment_index))
+                # input('...')
+                while expected_payment_index < iteration_length:
+                # means there is no repayment to match this amount yet
+                    this_row = {'zip_loan_id': zip_id,
                         'repayment_expected_date': expected_payment['date'],
                         'repayment_expected_amount': expected_payment['amount'],
                         'cumulative_expected_amount': cumulative_expected_amount,
-                        'repayment_amount': current_payment['amount'],
-                        'repayment_date': current_payment['date']}
-            output_rows.append(this_row)
-            print(this_row)
-            expected_payment = dictionary['expected_payments'][expected_payment_index]
-            expected_payment_index += 1
+                        'repayment_amount': 'not made',
+                        'repayment_date': 'not made'}
+                    output_rows.append(this_row)
+                    # print(this_row)
+                    expected_payment = dictionary['expected_payments'][expected_payment_index]
+                    expected_payment_index += 1
+                    expected_payment_amount = float(expected_payment['amount'])
+                    cumulative_expected_amount = cumulative_expected_amount + expected_payment_amount
 
-        elif cumulative_repaid_amount < cumulative_expected_amount:
-            current_payment = dictionary['collected_payments'][current_payment_index]
-            current_payment_index += 1
+            # current_payment = dictionary['collected_payments'][current_payment_index]
+            # current_payment_index += 1
 
-print(output_rows)
+# print(output_rows)
 
-output = csv.DictWriter(open('data/output.csv', 'w+'), fieldnames=[
+# doesnt look like the "future payments" are being accurately coded
+# just prints all of the same entry instead of "not made"
+# i think this is because it's never hitting the "index error"
+# check out 19717
+
+output = csv.DictWriter(open('data/output.csv', 'wb'), fieldnames=[
                                                   'zip_loan_id',
                                                   'repayment_expected_date',
                                                   'repayment_expected_amount',
@@ -105,5 +173,6 @@ output = csv.DictWriter(open('data/output.csv', 'w+'), fieldnames=[
                                                   'repayment_amount',
                                                   'repayment_date'])
 
+output.writeheader()
 for row in output_rows:
     output.writerow(row)

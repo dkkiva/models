@@ -83,6 +83,7 @@ for zip_id, dictionary in id_dict.items():
     cumulative_repaid_amount = cumulative_repaid_amount + current_payment_amount
     
     while expected_payment_index < iteration_length:
+        skip_final = False
 
         if cumulative_repaid_amount > cumulative_expected_amount:
             while cumulative_repaid_amount > cumulative_expected_amount:
@@ -91,12 +92,14 @@ for zip_id, dictionary in id_dict.items():
                             'expected_amount': expected_payment['amount'],
                             'expected_cumulative_amount': cumulative_expected_amount,
                             'repayment_date': current_payment['date'],
+                            'place': 0.01,
                             'repayment_amount': current_payment['amount'],
                             'repayment_cumulative_amount': cumulative_repaid_amount}
                 output_rows.append(this_row)
                 try:
                     expected_payment = dictionary['expected_payments'][expected_payment_index]
                 except IndexError:
+                    skip_final = True
                     break
                 expected_payment_index += 1
                 expected_payment_amount = float(expected_payment['amount'])
@@ -105,16 +108,19 @@ for zip_id, dictionary in id_dict.items():
             try:
                 current_payment = dictionary['collected_payments'][current_payment_index]
             except IndexError:
-                if expected_payment_index == iteration_length:
-                    this_row = {'zip_loan_id': zip_id,
-                            'expected_date': expected_payment['date'],
-                            'expected_amount': expected_payment['amount'],
-                            'expected_cumulative_amount': cumulative_expected_amount,
-                            'repayment_date': current_payment['date'],
-                            'repayment_amount': current_payment['amount'],
-                            'repayment_cumulative_amount': cumulative_repaid_amount}
-                    output_rows.append(this_row)
-                else:
+                # break
+                # # skip_final = True
+                # if expected_payment_index == iteration_length:
+                #     this_row = {'zip_loan_id': zip_id,
+                #             'expected_date': expected_payment['date'],
+                #             'expected_amount': expected_payment['amount'],
+                #             'expected_cumulative_amount': cumulative_expected_amount,
+                #             'repayment_date': current_payment['date'],
+                #             'place': 0.1,
+                #             'repayment_amount': current_payment['amount'],
+                #             'repayment_cumulative_amount': cumulative_repaid_amount}
+                #     output_rows.append(this_row)
+                # else:
                     while expected_payment_index < iteration_length:
                     # means there is no repayment to match this amount yet                  
                         this_row = {'zip_loan_id': zip_id,
@@ -122,6 +128,7 @@ for zip_id, dictionary in id_dict.items():
                             'expected_amount': expected_payment['amount'],
                             'expected_cumulative_amount': cumulative_expected_amount,
                             'repayment_amount': 'not made',
+                            'place': 0,
                             'repayment_date': 'not made',
                             'repayment_cumulative_amount': 'not made'}
                         payments_not_made_list.append(this_row)
@@ -138,50 +145,66 @@ for zip_id, dictionary in id_dict.items():
             cumulative_repaid_amount = cumulative_repaid_amount + current_payment_amount
 
         elif cumulative_repaid_amount == cumulative_expected_amount:
-                this_row = {'zip_loan_id': zip_id,
-                            'expected_date': expected_payment['date'],
-                            'expected_amount': expected_payment['amount'],
-                            'expected_cumulative_amount': cumulative_expected_amount,
-                            'repayment_date': current_payment['date'],
-                            'repayment_amount': current_payment['amount'],
-                            'repayment_cumulative_amount': cumulative_repaid_amount}
-                output_rows.append(this_row)
+            this_row = {'zip_loan_id': zip_id,
+                        'expected_date': expected_payment['date'],
+                        'expected_amount': expected_payment['amount'],
+                        'expected_cumulative_amount': cumulative_expected_amount,
+                        'repayment_date': current_payment['date'],
+                        'place': 1,
+                        'repayment_amount': current_payment['amount'],
+                        'repayment_cumulative_amount': cumulative_repaid_amount}
+            output_rows.append(this_row)
 
+            try:
+                current_payment = dictionary['collected_payments'][current_payment_index]
+            except IndexError:
+                skip_final = True
+                # expected_payment_index += 1
                 try:
                     expected_payment = dictionary['expected_payments'][expected_payment_index]
                 except IndexError:
                     break
-                expected_payment_index += 1
                 expected_payment_amount = float(expected_payment['amount'])
                 cumulative_expected_amount = cumulative_expected_amount + expected_payment_amount
 
-                try:
-                    current_payment = dictionary['collected_payments'][current_payment_index]
-                except IndexError:
-                    while expected_payment_index < iteration_length:
-                    # means there is no repayment to match this amount yet                  
-                        this_row = {'zip_loan_id': zip_id,
-                            'expected_date': expected_payment['date'],
-                            'expected_amount': expected_payment['amount'],
-                            'expected_cumulative_amount': cumulative_expected_amount,
-                            'repayment_amount': 'not made',
-                            'repayment_date': 'not made',
-                            'repayment_cumulative_amount': 'not made'}
-                        payments_not_made_list.append(this_row)
+                while expected_payment_index < iteration_length:
+                # means there is no repayment to match this amount yet                  
+                    this_row = {'zip_loan_id': zip_id,
+                        'expected_date': expected_payment['date'],
+                        'expected_amount': expected_payment['amount'],
+                        'expected_cumulative_amount': cumulative_expected_amount,
+                        'repayment_amount': 'not made',
+                        'place': 2,
+                        'repayment_date': 'not made',
+                        'repayment_cumulative_amount': 'not made'}
+                    payments_not_made_list.append(this_row)
+                    expected_payment_index += 1
+                    try:
                         expected_payment = dictionary['expected_payments'][expected_payment_index]
-                        expected_payment_index += 1
-                        expected_payment_amount = float(expected_payment['amount'])
-                        cumulative_expected_amount = cumulative_expected_amount + expected_payment_amount
-                    if len(payments_not_made_list) > 0:
-                        for payment_row in payments_not_made_list:
-                            output_rows.append(payment_row)
-                    break
+                    except IndexError:
+                        break
+                    expected_payment_amount = float(expected_payment['amount'])
+                    cumulative_expected_amount = cumulative_expected_amount + expected_payment_amount
 
-                current_payment_index += 1
-                current_payment_amount = float(current_payment['amount'])
-                cumulative_repaid_amount = cumulative_repaid_amount + current_payment_amount
+                if len(payments_not_made_list) > 0:
+                    for payment_row in payments_not_made_list:
+                        output_rows.append(payment_row)              
+                break
 
-                payments_not_made_list = []
+            try:
+                expected_payment = dictionary['expected_payments'][expected_payment_index]
+            except IndexError:
+                break
+
+            expected_payment_index += 1
+            expected_payment_amount = float(expected_payment['amount'])
+            cumulative_expected_amount = cumulative_expected_amount + expected_payment_amount
+
+            current_payment_index += 1
+            current_payment_amount = float(current_payment['amount'])
+            cumulative_repaid_amount = cumulative_repaid_amount + current_payment_amount
+
+            payments_not_made_list = []
 
         elif cumulative_repaid_amount < cumulative_expected_amount:
             try:
@@ -192,10 +215,12 @@ for zip_id, dictionary in id_dict.items():
                     'expected_cumulative_amount': cumulative_expected_amount,
                     'repayment_amount': 'not made',
                     'repayment_date': 'not made',
+                    'place': 3,
                     'repayment_cumulative_amount': 'not made'}
                 payments_not_made_list.append(this_row)
                 current_payment_index += 1
             except IndexError:
+                skip_final = True
                 while expected_payment_index < iteration_length:
                 # means there is no repayment to match this amount yet                  
                     this_row = {'zip_loan_id': zip_id,
@@ -203,6 +228,7 @@ for zip_id, dictionary in id_dict.items():
                         'expected_amount': expected_payment['amount'],
                         'expected_cumulative_amount': cumulative_expected_amount,
                         'repayment_amount': 'not made',
+                        'place': 4,
                         'repayment_date': 'not made',
                         'repayment_cumulative_amount': 'not made'}
                     payments_not_made_list.append(this_row)
@@ -213,6 +239,34 @@ for zip_id, dictionary in id_dict.items():
                 if len(payments_not_made_list) > 0:
                     for payment_row in payments_not_made_list:
                         output_rows.append(payment_row)
+                this_row = {'zip_loan_id': zip_id,
+                    'expected_date': expected_payment['date'],
+                    'expected_amount': expected_payment['amount'],
+                    'expected_cumulative_amount': cumulative_expected_amount,
+                    'repayment_amount': 'not made',
+                    'place': 5,
+                    'repayment_date': 'not made',
+                    'repayment_cumulative_amount': 'not made'}
+                payments_not_made_list.append(this_row)
+
+    if skip_final is False:
+        if len(payments_not_made_list) > 0:
+            this_row = {'zip_loan_id': zip_id,
+                'expected_date': expected_payment['date'],
+                'expected_amount': expected_payment['amount'],
+                'expected_cumulative_amount': cumulative_expected_amount,
+                'repayment_date': 'not made',
+                'repayment_amount': 'not made',
+                'repayment_cumulative_amount': 'not made'}
+        else:
+            this_row = {'zip_loan_id': zip_id,
+                'expected_date': expected_payment['date'],
+                'expected_amount': expected_payment['amount'],
+                'expected_cumulative_amount': cumulative_expected_amount,
+                'repayment_date': current_payment['date'],
+                'repayment_amount': current_payment['amount'],
+                'repayment_cumulative_amount': cumulative_repaid_amount}
+        output_rows.append(this_row)  
 
 output = csv.DictWriter(open('data/output.csv', 'wb'), fieldnames=[
                                                   'zip_loan_id',
@@ -221,7 +275,8 @@ output = csv.DictWriter(open('data/output.csv', 'wb'), fieldnames=[
                                                   'expected_cumulative_amount',
                                                   'repayment_date',
                                                   'repayment_amount',
-                                                  'repayment_cumulative_amount'])
+                                                  'repayment_cumulative_amount',
+                                                  'place'])
 
 output.writeheader()
 for row in output_rows:

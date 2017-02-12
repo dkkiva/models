@@ -15,4 +15,4 @@ Kiva has three main aims for this project:
 
 ## Data Sources
 
-Available via Google Drive from Project Manager.
+Available via Google Drive.  For access, please open an issue in this repo requesting access and a Data Ambassador will follow up with a link. 

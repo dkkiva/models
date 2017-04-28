@@ -15,11 +15,10 @@ Kiva has three main aims for this project:
 
 ## Code in this Repo
 - prob1_loan_repayments
-
- - Python code (and requirements.txt file) that will take the two DataKind CSVs (repayments_expected.csv and repayments_collected.csv) and combine them into a single file that can be used for modeling
- - Running `python repayment_normalizer.py` will produce the combined dataset as long as the filepaths in repayment_normalizer.py point to the correct files
- - This code can be reused on any set of data in the following format to recreate the combined dataset (in case you'd like to re-fit the model, tinker, test some assumptions or improve the mode in the future)
- - more information on repayments_collected & repayments_expected can be found in the Data Sources section of this README, as can an example of the final combined dataset
+  - Python code (and requirements.txt file) that will take the two DataKind CSVs (repayments_expected.csv and repayments_collected.csv) and combine them into a single file that can be used for modeling
+  - Running `python repayment_normalizer.py` will produce the combined dataset as long as the filepaths in repayment_normalizer.py point to the correct files
+  - This code can be reused on any set of data in the following format to recreate the combined dataset (in case you'd like to re-fit the model, tinker, test some assumptions or improve the mode in the future)
+  - more information on repayments_collected & repayments_expected can be found in the Data Sources section of this README, as can an example of the final combined dataset
 
 ## Data Sources
 
